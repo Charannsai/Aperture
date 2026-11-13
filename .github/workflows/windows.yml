@@ -2,12 +2,12 @@ name: Windows x64 preview installer
 on:
   workflow_dispatch:
     inputs:
-      upload_artifact:
+      create_draft:
         type: boolean
-        description: Upload candidate only after storage/no-spend validation
+        description: Save tested candidate as draft GitHub prerelease (not Actions artifact storage)
         default: false
 permissions:
-  contents: read
+  contents: write
 concurrency:
   group: windows-preview
   cancel-in-progress: false
@@ -18,32 +18,66 @@ jobs:
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
         with:
-          persist-credentials: false
+          persist-credentials: true
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
         with:
           node-version: '24.22.1'
       - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
         with:
           python-version: '3.11'
-      - name: Expand readable source overlay
+      - name: Expand and version readable Aperture source
+        if: ${{ hashFiles('scripts/build-windows.ps1') == '' }}
+        shell: python
+        run: |
+          from pathlib import Path
+          import zipfile,shutil
+          with zipfile.ZipFile('1-source-overlay.zip') as z:
+              z.extractall('.')
+          replacements=[('Charan IDE - Silk Preview','Aperture Preview'),('Silk IDE Preview','Aperture IDE Preview'),('Silk Preview','Aperture Preview'),('Silk-Preview','Aperture-Preview'),('Silk Development','Aperture Development'),('silk-preview','aperture-preview'),('SilkPreview','AperturePreview'),('charannsai.charan-ide.','charannsai.aperture.'),('silk-ai','aperture-ai'),('Silk Graphite','Aperture Graphite'),('Silk Porcelain','Aperture Porcelain'),('Silk:','Aperture:'),('"displayName": "Silk"','"displayName": "Aperture"'),('"name": "Silk"','"name": "Aperture"'),('"title": "Silk"','"title": "Aperture"'),('>Silk<','>Aperture<'),('Silk','Aperture'),('silk','aperture')]
+          for root in ['extensions','scripts']:
+              for p in Path(root).rglob('*'):
+                  if p.is_file():
+                      s=p.read_text()
+                      for a,b in replacements:s=s.replace(a,b)
+                      p.write_text(s)
+          Path('extensions/silk-ai').rename('extensions/aperture-ai')
+          p=Path('scripts/prepare.mjs');s=p.read_text().replace("win32MutexName:'aperture-preview'","win32TunnelMutex:'aperture-preview-tunnel',win32TunnelServiceMutex:'aperture-preview-tunnelservice',tunnelApplicationName:'aperture-tunnel',win32MutexName:'aperture-preview'");p.write_text(s)
+          p=Path('README.md');s=p.read_text().replace('Charan IDE - Silk Preview','Aperture Preview').replace('"Silk" is a working product name. ','').replace('`1-source-overlay.zip` contains the complete readable source additions and build/test scripts with their directory structure. The root workflow expands this archive before building. It contains no dependencies, credentials or private project data.','Readable source additions, themes and Windows build/test scripts are versioned directly in this repository. No dependencies, credentials or private project data are included.').replace('Extract `1-source-overlay.zip` first. ','');p.write_text(s)
+          Path('1-source-overlay.zip').unlink();Path('2-README.md').unlink(missing_ok=True)
+          
+          Path('.gitignore').write_text('vscode/\nnode_modules/\nartifacts/\n*.log\n.env*\nout/\nprovider-check.cjs\n')
+      - name: Commit readable source tree
         shell: pwsh
-        run: Expand-Archive 1-source-overlay.zip -DestinationPath overlay
+        run: |
+          git config user.name "Charannsai"
+          git config user.email "Charannsai@users.noreply.github.com"
+          git add -A
+          git diff --cached --quiet
+          if ($LASTEXITCODE -eq 1) {
+            git commit -m "Version readable Aperture source and isolated preview identity"
+            if ($LASTEXITCODE -ne 0) { throw 'Source commit failed' }
+            git push origin HEAD:main
+            if ($LASTEXITCODE -ne 0) { throw 'Source push failed' }
+          }
       - name: Build isolated unsigned Windows preview
         shell: pwsh
-        run: ./overlay/scripts/build-windows.ps1 -Source "$env:RUNNER_TEMP\silk-vscode"
+        run: ./scripts/build-windows.ps1 -Source "$env:RUNNER_TEMP\silk-vscode"
       - name: Validate install, runtime and uninstall
         shell: pwsh
-        run: ./overlay/scripts/test-installer.ps1 -Source "$env:RUNNER_TEMP\silk-vscode"
-      - name: Upload candidate installer
-        if: ${{ inputs.upload_artifact }}
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
-        with:
-          name: silk-preview-windows-x64-candidate
-          path: |
-            overlay/artifacts/*.exe
-            overlay/artifacts/SHA256.txt
-            overlay/artifacts/*.png
-            overlay/artifacts/smoke-result.json
-          if-no-files-found: error
-          retention-days: 3
-          compression-level: 0
+        run: ./scripts/test-installer.ps1 -Source "$env:RUNNER_TEMP\silk-vscode"
+      - name: Preserve tested candidate as draft prerelease
+        if: ${{ inputs.create_draft }}
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $tag = "windows-preview-${{ github.run_number }}"
+          $notes = @'
+          Unsigned Windows x64 preview candidate. Draft pending visual review.
+          Build, disposable install, launch, theme, file-save, context, disconnected-provider guard, terminal, restart and uninstall smoke checks passed.
+          Not a full regression suite or feature-parity claim. AI needs a separately configured model/provider; external providers may charge. No model is bundled. No autonomous terminal execution. Updater disabled. Microsoft Marketplace rights are not supplied.
+          '@
+          $notes | Set-Content draft-notes.md
+          gh release create $tag artifacts/Aperture-Preview-Windows-x64-Setup.exe artifacts/SHA256.txt artifacts/smoke-result.json artifacts/*.png --repo ${{ github.repository }} --draft --prerelease --target $(git rev-parse HEAD) --title "Aperture Preview - Windows x64 candidate ${{ github.run_number }}" --notes-file draft-notes.md
+          if ($LASTEXITCODE -ne 0) { throw 'Draft release preservation failed' }
