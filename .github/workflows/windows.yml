@@ -1,11 +1,6 @@
 name: Windows x64 preview installer
 on:
   workflow_dispatch:
-    inputs:
-      create_draft:
-        type: boolean
-        description: Save tested candidate as draft GitHub prerelease (not Actions artifact storage)
-        default: false
 permissions:
   contents: write
 concurrency:
@@ -43,7 +38,6 @@ jobs:
         shell: pwsh
         run: ./scripts/test-installer.ps1 -Source "$env:RUNNER_TEMP\silk-vscode"
       - name: Preserve tested candidate as draft prerelease
-        if: ${{ inputs.create_draft }}
         shell: pwsh
         env:
           GH_TOKEN: ${{ github.token }}
