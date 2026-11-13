@@ -37,12 +37,12 @@ jobs:
           for root in ['extensions','scripts']:
               for p in Path(root).rglob('*'):
                   if p.is_file():
-                      s=p.read_text()
+                      s=p.read_text(encoding="utf-8")
                       for a,b in replacements:s=s.replace(a,b)
-                      p.write_text(s)
+                      p.write_text(s,encoding="utf-8")
           Path('extensions/silk-ai').rename('extensions/aperture-ai')
-          p=Path('scripts/prepare.mjs');s=p.read_text().replace("win32MutexName:'aperture-preview'","win32TunnelMutex:'aperture-preview-tunnel',win32TunnelServiceMutex:'aperture-preview-tunnelservice',tunnelApplicationName:'aperture-tunnel',win32MutexName:'aperture-preview'");p.write_text(s)
-          p=Path('README.md');s=p.read_text().replace('Charan IDE - Silk Preview','Aperture Preview').replace('"Silk" is a working product name. ','').replace('`1-source-overlay.zip` contains the complete readable source additions and build/test scripts with their directory structure. The root workflow expands this archive before building. It contains no dependencies, credentials or private project data.','Readable source additions, themes and Windows build/test scripts are versioned directly in this repository. No dependencies, credentials or private project data are included.').replace('Extract `1-source-overlay.zip` first. ','');p.write_text(s)
+          p=Path('scripts/prepare.mjs');s=p.read_text(encoding="utf-8").replace("win32MutexName:'aperture-preview'","win32TunnelMutex:'aperture-preview-tunnel',win32TunnelServiceMutex:'aperture-preview-tunnelservice',tunnelApplicationName:'aperture-tunnel',win32MutexName:'aperture-preview'");p.write_text(s,encoding="utf-8")
+          p=Path('README.md');s=p.read_text(encoding="utf-8").replace('Charan IDE - Silk Preview','Aperture Preview').replace('"Silk" is a working product name. ','').replace('`1-source-overlay.zip` contains the complete readable source additions and build/test scripts with their directory structure. The root workflow expands this archive before building. It contains no dependencies, credentials or private project data.','Readable source additions, themes and Windows build/test scripts are versioned directly in this repository. No dependencies, credentials or private project data are included.').replace('Extract `1-source-overlay.zip` first. ','');p.write_text(s,encoding="utf-8")
           Path('1-source-overlay.zip').unlink();Path('2-README.md').unlink(missing_ok=True)
           
           Path('.gitignore').write_text('vscode/\nnode_modules/\nartifacts/\n*.log\n.env*\nout/\nprovider-check.cjs\n')
