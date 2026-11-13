@@ -1,0 +1,65 @@
+name: Windows candidate visual and real-model review
+on:
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  review:
+    runs-on: windows-2022
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '24.22.1'
+      - name: Prepare retained candidate and real CPU model
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $ErrorActionPreference = 'Stop'
+          New-Item -ItemType Directory -Force review,tooling | Out-Null
+          gh release download windows-preview-6 --repo ${{ github.repository }} --pattern Aperture-Preview-Windows-x64-Setup.exe --dir review
+          if ($LASTEXITCODE -ne 0) { throw 'Candidate download failed' }
+          if ((Get-FileHash review/Aperture-Preview-Windows-x64-Setup.exe).Hash.ToLower() -ne '6b1cde25bbc758b7be3faea3d48102530fcd361d04a2bd29d95c712cf27c1d81') { throw 'Candidate digest mismatch' }
+          $p = Start-Process -FilePath (Resolve-Path review/Aperture-Preview-Windows-x64-Setup.exe) -ArgumentList @('/VERYSILENT','/SUPPRESSMSGBOXES','/NORESTART',"/DIR=$env:RUNNER_TEMP\aperture-review-install",'/MERGETASKS=!runcode,!addtopath,!associatewithfiles,!addcontextmenufiles,!addcontextmenufolders') -Wait -PassThru
+          if ($p.ExitCode -ne 0) { throw 'Install failed' }
+          npm install --prefix tooling --no-audit --no-fund playwright@1.57.0
+          if ($LASTEXITCODE -ne 0) { throw 'Playwright install failed' }
+          Invoke-WebRequest https://github.com/ggml-org/llama.cpp/releases/download/b12322/llama-b12322-bin-win-cpu-x64.zip -OutFile "$env:RUNNER_TEMP\llama.zip"
+          Expand-Archive "$env:RUNNER_TEMP\llama.zip" "$env:RUNNER_TEMP\llama"
+          Invoke-WebRequest https://huggingface.co/Qwen/Qwen2.5-Coder-0.5B-Instruct-GGUF/resolve/main/qwen2.5-coder-0.5b-instruct-q4_k_m.gguf -OutFile "$env:RUNNER_TEMP\qwen.gguf"
+          if ((Get-FileHash "$env:RUNNER_TEMP\qwen.gguf").Hash.ToLower() -ne '1d9614638d18024d0fbb36575a15f1302a3adf044df10345688ec4f6e1c4ff32') { throw 'Model digest mismatch' }
+          $server = Get-ChildItem "$env:RUNNER_TEMP\llama" -Filter llama-server.exe -Recurse | Select-Object -First 1
+          Start-Process -FilePath $server.FullName -ArgumentList @('-m',"$env:RUNNER_TEMP\qwen.gguf",'--host','127.0.0.1','--port','18761','-c','2048','-t','2','-np','1','-n','256','--alias','qwen2.5-coder-0.5b-local') -RedirectStandardOutput review/model-stdout.log -RedirectStandardError review/model-stderr.log
+          $ready = $false
+          for ($i=0; $i -lt 90; $i++) { try { $r = Invoke-WebRequest http://127.0.0.1:18761/health; if ($r.StatusCode -eq 200) { $ready=$true; break } } catch {}; Start-Sleep 1 }
+          if (-not $ready) { throw 'Real local model server did not start' }
+      - name: Review settled UI, startup logs and real model edit
+        shell: pwsh
+        run: |
+          @'
+          const fs=require('node:fs'),path=require('node:path'),assert=require('node:assert/strict'),cp=require('node:child_process');
+          const {_electron:electron}=require('playwright');
+          const root=process.env.RUNNER_TEMP, out=path.resolve('review'),exe=path.join(root,'aperture-review-install','Aperture Preview.exe');fs.mkdirSync(out,{recursive:true});
+          const wait=ms=>new Promise(r=>setTimeout(r,ms));const report={checks:[],profiles:[]};let app,w,f;
+          const command=async(s)=>{await w.keyboard.press('Control+Shift+P');await w.keyboard.type(s);await wait(500);await w.keyboard.press('Enter');await w.locator('.quick-input-widget').waitFor({state:'hidden',timeout:10000}).catch(()=>{});await wait(1000);};
+          const settled=async()=>{for(const frame of w.frames()){if(await frame.locator('#prompt').count()){f=frame;break;}}assert.ok(f,'assistant webview');await f.locator('#prompt').waitFor();await f.evaluate(async()=>{await Promise.all(document.getAnimations({subtree:true}).map(a=>a.finished.catch(()=>{})));});await wait(350);};
+          const shot=async(name)=>{await settled();await w.screenshot({path:path.join(out,name+'.png')});};
+          async function launch(label,disable){const scratch=path.join(root,'aperture-review-work',label),project=path.join(scratch,'project'),profile=path.join(scratch,'profile');fs.mkdirSync(project,{recursive:true});fs.mkdirSync(path.join(profile,'User'),{recursive:true});const file=path.join(project,'add.ts');fs.writeFileSync(file,'export function add(a: number, b: number): number { return a - b; }\n');const cfg={'workbench.startupEditor':'none','telemetry.telemetryLevel':'off','files.autoSave':'off','window.dialogStyle':'custom','aperture.provider':'openai-compatible','aperture.endpoint':'http://127.0.0.1:18761','aperture.model':'qwen2.5-coder-0.5b-local'};if(disable)cfg['chat.disableAIFeatures']=true;fs.writeFileSync(path.join(profile,'User','settings.json'),JSON.stringify(cfg));app=await electron.launch({executablePath:exe,args:[project,file,'--user-data-dir='+profile,'--extensions-dir='+path.join(scratch,'extensions'),'--skip-welcome','--skip-release-notes','--disable-workspace-trust','--log','trace'],timeout:60000});w=await app.firstWindow();await w.locator('.monaco-workbench').waitFor({timeout:60000});await app.evaluate(({BrowserWindow})=>{const b=BrowserWindow.getAllWindows()[0];b.setSize(1366,768);b.center();});await command('Aperture: Open Assistant');f=undefined;for(let i=0;i<100;i++){try{await settled();break;}catch{await wait(200);}}await wait(10000);await shot(label+'-10sec');await wait(80000);await shot(label+'-90sec');const notifications=await w.locator('.notifications-toasts').innerText().catch(()=>'');report.profiles.push({label,disableUpstreamAI:disable,notifications});return{scratch,project,profile,file};}
+          function copyLogs(profile,label){const source=path.join(profile,'logs');if(fs.existsSync(source))fs.cpSync(source,path.join(out,label+'-logs'),{recursive:true});}
+          (async()=>{let state;try{state=await launch('default',false);await app.close();app=undefined;copyLogs(state.profile,'default');state=await launch('upstream-ai-off',true);await f.locator('#theme').click();await w.locator('.monaco-workbench.vs').waitFor();await shot('settled-light-1366');await f.locator('#theme').click();await w.locator('.monaco-workbench.vs-dark').waitFor();await shot('settled-dark-1366');await app.evaluate(({BrowserWindow})=>BrowserWindow.getAllWindows()[0].setSize(1024,728));await shot('settled-dark-1024');const footer=await f.locator('footer').boundingBox(),height=await f.evaluate(()=>innerHeight);report.footer={box:footer,viewportHeight:height,contained:footer.y+footer.height<=height+1};assert.ok(report.footer.contained,'footer fits narrow laptop viewport');await app.evaluate(({BrowserWindow})=>BrowserWindow.getAllWindows()[0].setSize(1366,768));await w.keyboard.press('Control+p');await w.keyboard.type('add.ts');await wait(400);await w.keyboard.press('Enter');await wait(400);await w.keyboard.press('Control+l');await f.locator('.context-chip').waitFor();await f.locator('[data-mode=edit]').click();await f.locator('#prompt').fill('Fix add to add its two parameters instead of subtracting. Preserve the function signature. Return only the replacement function in one fenced typescript code block.');await f.locator('#send').click();await f.getByText('Review diff',{exact:true}).waitFor({timeout:120000});report.modelOutput=await f.locator('.assistant .message-body').last().innerText();assert.match(report.modelOutput,/return\s+a\s*\+\s*b\s*;/);await shot('real-model-proposal');await f.getByText('Review diff',{exact:true}).click();await w.locator('.monaco-diff-editor').waitFor({timeout:20000});await shot('real-model-diff');await f.getByText('Apply with confirmation',{exact:true}).click();await w.getByRole('button',{name:'Apply change',exact:true}).waitFor({timeout:10000});await w.screenshot({path:path.join(out,'real-model-confirm.png')});await w.getByRole('button',{name:'Apply change',exact:true}).click();await f.getByText('Edit applied to the editor.',{exact:false}).waitFor();assert.match(fs.readFileSync(state.file,'utf8'),/return a - b/);await w.keyboard.press('Control+p');await w.keyboard.type('add.ts');await wait(400);await w.keyboard.press('Enter');await wait(400);await w.keyboard.press('Control+s');await wait(500);report.saved=fs.readFileSync(state.file,'utf8');assert.match(report.saved,/return\s+a\s*\+\s*b\s*;/);report.checks.push('real local Qwen CPU streaming proposal','native diff','visible confirmation','unsaved edit leaves disk unchanged','explicit Save writes corrected function');await shot('real-model-saved');await app.close();app=undefined;copyLogs(state.profile,'upstream-ai-off');report.passed=true;}catch(e){report.error=String(e.stack||e);if(w)await w.screenshot({path:path.join(out,'review-failure.png')}).catch(()=>{});throw e;}finally{if(app)await app.close().catch(()=>{});if(state)copyLogs(state.profile,'last');fs.writeFileSync(path.join(out,'review-result.json'),JSON.stringify(report,null,2));}})().catch(e=>{console.error(e);process.exit(1)});
+          '@ | Set-Content tooling/review.cjs
+          node tooling/review.cjs
+          if ($LASTEXITCODE -ne 0) { throw 'Targeted review failed; see retained diagnostics' }
+      - name: Preserve review evidence in existing private draft
+        if: always()
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $logs = Get-ChildItem review -Directory -Filter '*-logs'
+          if ($logs) { Compress-Archive -Path $logs.FullName -DestinationPath review/startup-logs.zip -Force }
+          $files = Get-ChildItem review -File | Where-Object { $_.Extension -in '.png','.json','.zip','.log' } | ForEach-Object { $_.FullName }
+          if ($files) { gh release upload windows-preview-6 @files --repo ${{ github.repository }} --clobber; if ($LASTEXITCODE -ne 0) { throw 'Review preservation failed' } }
