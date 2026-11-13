@@ -1,0 +1,9 @@
+import fs from 'node:fs';import path from 'node:path';import crypto from 'node:crypto';
+const [root,overlay]=process.argv.slice(2);if(!root||!overlay)throw new Error('Usage: node prepare.mjs SOURCE OVERLAY');
+const file=path.join(root,'product.json');const p=JSON.parse(fs.readFileSync(file));
+const guid=(key)=>{const x=crypto.createHash('sha256').update('charannsai.aperture.'+key).digest('hex').slice(0,32);return `{{${x.slice(0,8)}-${x.slice(8,12)}-4${x.slice(13,16)}-a${x.slice(17,20)}-${x.slice(20)}}`;};
+Object.assign(p,{nameShort:'Aperture Preview',nameLong:'Aperture IDE Preview',applicationName:'aperture-preview',dataFolderName:'.aperture-preview',sharedDataFolderName:'.aperture-preview-shared',win32TunnelMutex:'aperture-preview-tunnel',win32TunnelServiceMutex:'aperture-preview-tunnelservice',tunnelApplicationName:'aperture-tunnel',win32MutexName:'aperture-preview',win32DirName:'Aperture Preview',win32NameVersion:'Aperture Preview',win32RegValueName:'AperturePreview',win32AppUserModelId:'Charannsai.AperturePreview',win32ShellNameShort:'Aperture Preview',win32x64AppId:guid('system-x64'),win32x64UserAppId:guid('user-x64'),win32arm64AppId:guid('system-arm64'),win32arm64UserAppId:guid('user-arm64'),urlProtocol:'aperture-preview',reportIssueUrl:'',updateUrl:undefined,downloadUrl:undefined,quality:'preview',electronArtifactFeed:'',nodejsArtifactFeed:''});
+fs.writeFileSync(file,JSON.stringify(p,null,2));fs.cpSync(path.join(overlay,'extensions/aperture-ai'),path.join(root,'extensions/aperture-ai'),{recursive:true});
+// Ensure product identities never reuse Code-OSS/VS Code installer identifiers.
+if(p.win32x64UserAppId===p.win32x64AppId||p.win32RegValueName==='CodeOSS')throw new Error('Installer identity collision');
+console.log('Prepared isolated preview identity and assistant source. No updater or credentials configured.');

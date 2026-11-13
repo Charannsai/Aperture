@@ -1,0 +1,140 @@
+{
+  "name": "Aperture Graphite",
+  "type": "dark",
+  "colors": {
+    "focusBorder": "#af7c8b",
+    "foreground": "#dedbd6",
+    "descriptionForeground": "#908d87",
+    "errorForeground": "#e79696",
+    "editor.background": "#1b1c1c",
+    "editor.foreground": "#dedbd6",
+    "sideBar.background": "#202121",
+    "sideBar.foreground": "#b9b6b1",
+    "sideBar.border": "#303131",
+    "sideBarTitle.foreground": "#98958f",
+    "activityBar.background": "#191a1a",
+    "activityBar.foreground": "#d9c2c8",
+    "activityBar.inactiveForeground": "#777773",
+    "activityBar.border": "#303131",
+    "activityBarBadge.background": "#aa7685",
+    "activityBarBadge.foreground": "#ffffff",
+    "statusBar.background": "#191a1a",
+    "statusBar.foreground": "#8d8c85",
+    "statusBar.border": "#303131",
+    "statusBar.noFolderBackground": "#191a1a",
+    "statusBar.debuggingBackground": "#493440",
+    "titleBar.activeBackground": "#191a1a",
+    "titleBar.activeForeground": "#aaa69f",
+    "titleBar.inactiveBackground": "#191a1a",
+    "titleBar.border": "#303131",
+    "editorGroupHeader.tabsBackground": "#202121",
+    "editorGroup.border": "#343535",
+    "tab.activeBackground": "#292a29",
+    "tab.inactiveBackground": "#202121",
+    "tab.activeForeground": "#eee9e3",
+    "tab.inactiveForeground": "#8e8b85",
+    "tab.border": "#202121",
+    "tab.activeBorderTop": "#b88796",
+    "panel.background": "#1b1c1c",
+    "panel.border": "#343535",
+    "input.background": "#272828",
+    "input.foreground": "#dedbd6",
+    "input.border": "#3c3d3c",
+    "input.placeholderForeground": "#8a8882",
+    "button.background": "#b88998",
+    "button.foreground": "#191a1a",
+    "button.hoverBackground": "#cba0ad",
+    "button.secondaryBackground": "#303131",
+    "button.secondaryForeground": "#dedbd6",
+    "textLink.foreground": "#c699a7",
+    "textLink.activeForeground": "#e3bdc8",
+    "list.activeSelectionBackground": "#343132",
+    "list.activeSelectionForeground": "#f0e8e6",
+    "list.inactiveSelectionBackground": "#2b2a29",
+    "list.hoverBackground": "#2b2c2b",
+    "quickInput.background": "#242525",
+    "quickInput.foreground": "#dedbd6",
+    "quickInputList.focusBackground": "#393034",
+    "editorLineNumber.foreground": "#62635f",
+    "editorLineNumber.activeForeground": "#c6b9af",
+    "editorCursor.foreground": "#d3a3b2",
+    "editor.selectionBackground": "#70535f66",
+    "editor.lineHighlightBackground": "#222323",
+    "editorIndentGuide.background1": "#343535",
+    "editorIndentGuide.activeBackground1": "#6a6060",
+    "scrollbarSlider.background": "#79787435",
+    "scrollbarSlider.hoverBackground": "#79787460",
+    "scrollbarSlider.activeBackground": "#79787480",
+    "terminal.background": "#1b1c1c",
+    "terminal.foreground": "#c8c5bf",
+    "notificationCenterHeader.background": "#272828",
+    "notifications.background": "#272828",
+    "notifications.border": "#414140"
+  },
+  "tokenColors": [
+    {
+      "scope": [
+        "comment",
+        "punctuation.definition.comment"
+      ],
+      "settings": {
+        "foreground": "#777e77",
+        "fontStyle": "italic"
+      }
+    },
+    {
+      "scope": [
+        "keyword",
+        "storage.type",
+        "storage.modifier"
+      ],
+      "settings": {
+        "foreground": "#c59cab"
+      }
+    },
+    {
+      "scope": [
+        "string",
+        "constant.other.symbol"
+      ],
+      "settings": {
+        "foreground": "#b3c7a3"
+      }
+    },
+    {
+      "scope": [
+        "constant.numeric",
+        "constant.language"
+      ],
+      "settings": {
+        "foreground": "#d6b68a"
+      }
+    },
+    {
+      "scope": [
+        "entity.name.function",
+        "support.function"
+      ],
+      "settings": {
+        "foreground": "#d7c4a5"
+      }
+    },
+    {
+      "scope": [
+        "entity.name.type",
+        "support.type"
+      ],
+      "settings": {
+        "foreground": "#9cbec5"
+      }
+    },
+    {
+      "scope": [
+        "variable.parameter"
+      ],
+      "settings": {
+        "foreground": "#c1b9b0"
+      }
+    }
+  ]
+}

@@ -1,8 +1,8 @@
-# Charan IDE - Silk Preview
+# Aperture Preview
 
-A desktop IDE based on a pinned current Code-OSS source snapshot, with an integrated assistant and warm Graphite/Porcelain themes. "Silk" is a working product name. Early development, not a stable release or a promise of feature parity with commercial AI editors.
+A desktop IDE based on a pinned current Code-OSS source snapshot, with an integrated assistant and warm Graphite/Porcelain themes. Early development, not a stable release or a promise of feature parity with commercial AI editors.
 
-`1-source-overlay.zip` contains the complete readable source additions and build/test scripts with their directory structure. The root workflow expands this archive before building. It contains no dependencies, credentials or private project data.
+Readable source additions, themes and Windows build/test scripts are versioned directly in this repository. No dependencies, credentials or private project data are included.
 
 ## Windows release work
 
@@ -10,7 +10,7 @@ Target: Windows x64. The manual Actions workflow builds the full upstream deskto
 
 The source checkout is pinned to `e608ca420ca76f4bfc2cfbff02538d66242e8174` of microsoft/vscode. This repository contains our readable extension source, themes and reproducible build recipe rather than a duplicate copy of that large repository. The build fetches the exact public upstream revision and retains its license/third-party notices. No Microsoft Marketplace entitlement is implied. No Microsoft branding or service keys are supplied.
 
-Extract `1-source-overlay.zip` first. Run from Windows x64 with PowerShell 7, Git, Node 24.22.1, Python 3.11 and the Visual Studio C++ build tools required by the pinned upstream source. `scripts/build-windows.ps1` installs the pinned pnpm tool, downloads dependencies, compiles native components and runs the upstream Windows desktop/installer tasks. It refuses to overwrite an existing source folder. This pipeline is under validation; build failures are not hidden or converted into a demo package.
+Run from Windows x64 with PowerShell 7, Git, Node 24.22.1, Python 3.11 and the Visual Studio C++ build tools required by the pinned upstream source. `scripts/build-windows.ps1` installs the pinned pnpm tool, downloads dependencies, compiles native components and runs the upstream Windows desktop/installer tasks. It refuses to overwrite an existing source folder. This pipeline is under validation; build failures are not hidden or converted into a demo package.
 
 Installer identity and data folders are isolated from stock Code-OSS/VS Code. Updater is disabled until a trusted update route exists. Builds are unsigned; no certificate purchase or SmartScreen bypass is included. Model downloads are not bundled.
 

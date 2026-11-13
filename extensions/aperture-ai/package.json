@@ -1,0 +1,132 @@
+{
+  "name": "aperture-ai",
+  "displayName": "Aperture",
+  "description": "A quiet, local-first AI workspace for Code - OSS. Early development build.",
+  "version": "0.1.0",
+  "publisher": "charannsai",
+  "license": "MIT",
+  "engines": {
+    "vscode": "^1.100.0"
+  },
+  "main": "./out/extension.js",
+  "activationEvents": [
+    "onStartupFinished",
+    "onView:aperture.chat"
+  ],
+  "capabilities": {
+    "untrustedWorkspaces": {
+      "supported": false
+    }
+  },
+  "contributes": {
+    "commands": [
+      {
+        "command": "aperture.focus",
+        "title": "Aperture: Open Assistant"
+      },
+      {
+        "command": "aperture.attach",
+        "title": "Aperture: Add Selection to Chat"
+      },
+      {
+        "command": "aperture.configure",
+        "title": "Aperture: Configure Model"
+      },
+      {
+        "command": "aperture.clearKey",
+        "title": "Aperture: Remove Saved API Key"
+      }
+    ],
+    "keybindings": [
+      {
+        "command": "aperture.focus",
+        "key": "ctrl+shift+l",
+        "mac": "cmd+shift+l"
+      },
+      {
+        "command": "aperture.attach",
+        "key": "ctrl+l",
+        "mac": "cmd+l",
+        "when": "editorTextFocus"
+      }
+    ],
+    "viewsContainers": {
+      "secondarySidebar": [
+        {
+          "id": "aperture",
+          "title": "Aperture",
+          "icon": "media/aperture.svg"
+        }
+      ]
+    },
+    "views": {
+      "aperture": [
+        {
+          "id": "aperture.chat",
+          "name": "Aperture",
+          "type": "webview"
+        }
+      ]
+    },
+    "themes": [
+      {
+        "label": "Aperture Graphite",
+        "uiTheme": "vs-dark",
+        "path": "themes/graphite.json"
+      },
+      {
+        "label": "Aperture Porcelain",
+        "uiTheme": "vs",
+        "path": "themes/porcelain.json"
+      }
+    ],
+    "configuration": {
+      "title": "Aperture",
+      "properties": {
+        "aperture.provider": {
+          "type": "string",
+          "enum": [
+            "ollama",
+            "openai-compatible"
+          ],
+          "default": "ollama",
+          "description": "Local Ollama or an OpenAI-compatible endpoint. API usage may cost money.",
+          "scope": "application"
+        },
+        "aperture.endpoint": {
+          "type": "string",
+          "default": "http://127.0.0.1:11434",
+          "description": "HTTPS required except loopback local services. No credentials in URLs.",
+          "scope": "application"
+        },
+        "aperture.model": {
+          "type": "string",
+          "default": "",
+          "description": "Exact model name installed locally or available through your provider.",
+          "scope": "application"
+        },
+        "aperture.inlineCompletion": {
+          "type": "boolean",
+          "default": false,
+          "description": "Opt-in inline code completion. Sends nearby code to the configured model when invoked.",
+          "scope": "application"
+        }
+      }
+    },
+    "configurationDefaults": {
+      "workbench.colorTheme": "Aperture Graphite",
+      "workbench.startupEditor": "none",
+      "telemetry.telemetryLevel": "off",
+      "editor.fontSize": 14,
+      "editor.lineHeight": 24,
+      "editor.minimap.enabled": false,
+      "editor.smoothScrolling": true,
+      "workbench.list.smoothScrolling": true,
+      "editor.cursorSmoothCaretAnimation": "on",
+      "window.commandCenter": true,
+      "workbench.editor.tabSizing": "shrink",
+      "workbench.tree.indent": 16,
+      "workbench.sideBar.location": "left"
+    }
+  }
+}
